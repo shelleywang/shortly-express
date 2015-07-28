@@ -2,6 +2,7 @@ var express = require('express');
 var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
+var cookieParser = require('cookie-parser');
 
 
 var db = require('./app/config');
@@ -20,8 +21,10 @@ app.use(partials());
 app.use(bodyParser.json());
 // Parse forms (signup/login)
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser());
 app.use(express.static(__dirname + '/public'));
 
+app.use('/', util.loginCheck);
 
 app.get('/', 
 function(req, res) {
@@ -38,6 +41,14 @@ function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.send(200, links.models);
   });
+});
+
+app.get('/signup', function (req, res) {
+  res.render('signup');
+});
+
+app.get('/login', function (req, res) {
+  res.render('login');
 });
 
 app.post('/links', 
@@ -78,6 +89,48 @@ function(req, res) {
 // Write your authentication routes here
 /************************************************************/
 
+app.post('/signup', 
+function(req, res) {
+  var username = req.body.username;
+  var password = req.body.password;
+
+  new User({ username: username }).fetch().then(function(found) {
+    if (found) {
+      res.send(900, 'User Already Exists');
+    } else {
+      var user = new User({
+        username: username,
+        password: password
+      });
+
+      user.save().then(function(newUser) {
+        Users.add(newUser);
+        res.set('location', '/').status(201).end();
+      });
+    }
+  });
+});
+
+
+app.post('/login',
+function(req, res) {
+  var username = req.body.username;
+  var password = req.body.password;
+
+  new User({ username: username }).fetch().then(function(found) {
+    if (found) {
+      if (found.attributes.password === password) {
+        util.createOrRenewSession(req, res, function() {
+          res.set({'location':'/'}).status(200).end();
+        });
+      } else {
+        res.set('location', '/login').status(200).end();
+      }
+    } else {
+      res.set('location', '/login').status(200).end();
+    }
+  });
+});
 
 
 /************************************************************/

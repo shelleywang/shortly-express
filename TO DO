@@ -1,0 +1,8 @@
+TO DO:
+
+- SALT and hash passwords
+- Logout button (get rid of cookie)
+- session ID shouldn't just be an incrementing integer
+- associate links with users
+- associate sessions with users
+- users table IDs getting reset - Probably related to sessions handling

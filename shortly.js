@@ -3,6 +3,7 @@ var util = require('./lib/utility');
 var partials = require('express-partials');
 var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');
+var bcrypt = require('bcrypt-nodejs');
 
 
 var db = require('./app/config');
@@ -55,6 +56,11 @@ app.get('/login', function (req, res) {
   res.render('login');
 });
 
+app.get('/logout', function (req, res) {
+  util.destroySession(res);
+});
+
+
 app.post('/links', 
 function(req, res) {
   var uri = req.body.url;
@@ -102,15 +108,20 @@ function(req, res) {
     if (found) {
       res.send(900, 'User Already Exists');
     } else {
-      var user = new User({
-        username: username,
-        password: password
-      });
+      bcrypt.genSalt(null, function(err, salt) {
+        util.hashPassword(password, salt, function (err, hash) {
+          var user = new User({
+            username: username,
+            password: hash,
+            salt: salt
+          });
 
-      user.save().then(function(newUser) {
-        Users.add(newUser);
-        util.createOrRenewSession(req, res, function() {
-          res.set({'location':'/'}).status(302).end();
+          user.save().then(function(newUser) {
+            Users.add(newUser);
+            util.createOrRenewSession(req, res, function() {
+              res.set({'location':'/'}).status(302).end();
+            });
+          });
         });
       });
     }
@@ -125,13 +136,15 @@ function(req, res) {
 
   new User({ username: username }).fetch().then(function(found) {
     if (found) {
-      if (found.attributes.password === password) {
-        util.createOrRenewSession(req, res, function() {
-          res.set({'location':'/'}).status(302).end();
-        });
-      } else {
-        res.set('location', '/login').status(302).end();
-      }
+      util.hashPassword(password, found.attributes.salt, function (err, hash) {
+        if (found.attributes.password === hash) {
+          util.createOrRenewSession(req, res, function() {
+            res.set({'location':'/'}).status(302).end();
+          });
+        } else {
+          res.set('location', '/login').status(302).end();
+        }
+      });
     } else {
       res.set('location', '/login').status(302).end();
     }

@@ -24,7 +24,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(express.static(__dirname + '/public'));
 
-app.use('/', util.loginCheck);
+app.use(util.loginCheck);
 
 app.get('/', 
 function(req, res) {
@@ -41,6 +41,10 @@ function(req, res) {
   Links.reset().fetch().then(function(links) {
     res.send(200, links.models);
   });
+});
+
+app.get('/favicon.ico', function(req,res) {
+  res.status(404).end();
 });
 
 app.get('/signup', function (req, res) {
@@ -105,7 +109,9 @@ function(req, res) {
 
       user.save().then(function(newUser) {
         Users.add(newUser);
-        res.set('location', '/').status(201).end();
+        util.createOrRenewSession(req, res, function() {
+          res.set({'location':'/'}).status(302).end();
+        });
       });
     }
   });
@@ -121,13 +127,13 @@ function(req, res) {
     if (found) {
       if (found.attributes.password === password) {
         util.createOrRenewSession(req, res, function() {
-          res.set({'location':'/'}).status(200).end();
+          res.set({'location':'/'}).status(302).end();
         });
       } else {
-        res.set('location', '/login').status(200).end();
+        res.set('location', '/login').status(302).end();
       }
     } else {
-      res.set('location', '/login').status(200).end();
+      res.set('location', '/login').status(302).end();
     }
   });
 });

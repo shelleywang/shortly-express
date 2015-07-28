@@ -4,7 +4,7 @@ var partials = require('express-partials');
 var bodyParser = require('body-parser');
 var cookieParser = require('cookie-parser');
 var bcrypt = require('bcrypt-nodejs');
-
+var Bookshelf = require('bookshelf');
 
 var db = require('./app/config');
 var Users = require('./app/collections/users');
@@ -39,9 +39,21 @@ function(req, res) {
 
 app.get('/links', 
 function(req, res) {
-  Links.reset().fetch().then(function(links) {
-    res.send(200, links.models);
-  });
+
+  // db.knex('urls').join('users_urls', 'users_urls.url_id', 'urls.id')
+  // db.knex('urls').select("*").from('urls')
+  // .on('query', function(data){
+  //   console.log(data);
+  // })
+  // .then(function() {
+    Links.reset().fetch().then(function(links) {
+      // debugger;
+      res.send(200, links.models);
+    });
+  // });
+
+
+
 });
 
 app.get('/favicon.ico', function(req,res) {
@@ -72,7 +84,14 @@ function(req, res) {
 
   new Link({ url: uri }).fetch().then(function(found) {
     if (found) {
-      res.send(200, found.attributes);
+      util.getUserId(req, function(userid) {
+        db.knex('users_urls').insert([{user_id: userid,
+                         url_id: found.attributes.id}])
+          .into('users_urls')
+          .then(function() {
+            res.send(200, found.attributes);
+          });
+      });
     } else {
       util.getUrlTitle(uri, function(err, title) {
         if (err) {
@@ -87,8 +106,17 @@ function(req, res) {
         });
 
         link.save().then(function(newLink) {
-          Links.add(newLink);
-          res.send(200, newLink);
+
+          util.getUserId(req, function(userid) {
+            db.knex('users_urls').insert([{user_id: userid,
+                             url_id: newLink.id}])
+              .into('users_urls')
+              .then(function() {
+                Links.add(newLink);
+                res.send(200, newLink);
+              });
+          });
+
         });
       });
     }
@@ -118,7 +146,7 @@ function(req, res) {
 
           user.save().then(function(newUser) {
             Users.add(newUser);
-            util.createOrRenewSession(req, res, function() {
+            util.createOrRenewSession(req, res, newUser.id, function() {
               res.set({'location':'/'}).status(302).end();
             });
           });
@@ -138,7 +166,7 @@ function(req, res) {
     if (found) {
       util.hashPassword(password, found.attributes.salt, function (err, hash) {
         if (found.attributes.password === hash) {
-          util.createOrRenewSession(req, res, function() {
+          util.createOrRenewSession(req, res, found.attributes.id, function() {
             res.set({'location':'/'}).status(302).end();
           });
         } else {

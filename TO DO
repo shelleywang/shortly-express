@@ -1,10 +1,10 @@
 TO DO:
 
 - session ID shouldn't just be an incrementing integer
-- associate sessions with users
 - associate links with users
 
 DONE:
 - Logout button (get rid of cookie)
 - SALT and hash passwords
 - users table IDs getting reset - Probably related to sessions handling
+- associate sessions with users

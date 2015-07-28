@@ -65,6 +65,7 @@ db.knex.schema.hasTable('sessions').then(function (exists) {
       // session.string('sessionID', 32).primary();
       session.increments('id').primary();
       session.dateTime('expires');
+      session.integer('user_id').references('id').inTable('users');
     }).then(function (table) {
       console.log('Created Table ', table);
     });

@@ -39,21 +39,15 @@ function(req, res) {
 
 app.get('/links', 
 function(req, res) {
-
-  // db.knex('urls').join('users_urls', 'users_urls.url_id', 'urls.id')
-  // db.knex('urls').select("*").from('urls')
-  // .on('query', function(data){
-  //   console.log(data);
-  // })
-  // .then(function() {
-    Links.reset().fetch().then(function(links) {
-      // debugger;
-      res.send(200, links.models);
+  util.getUserId( req, function(userid) {
+    db.knex('urls')
+    .join('users_urls', 'urls.id', "=",'users_urls.url_id')
+    .select("*")
+    .where('users_urls.user_id',userid)
+    .then(function(data) {
+      res.send(200, data);
     });
-  // });
-
-
-
+  });
 });
 
 app.get('/favicon.ico', function(req,res) {
